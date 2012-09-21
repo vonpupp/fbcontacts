@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/python
 
 #   Project:			fbcontacts
@@ -59,7 +60,8 @@
                                 and I should be able to export it if I want.
 """
 
-import argparse, codecs, sys, mmap, re, csv
+#import argparse
+import codecs, sys, mmap, re, csv
 #import os
 from vlog import vlogger
 
@@ -74,6 +76,12 @@ def split_on_caps(str):
     for word in rs:
         fs += " "+word
     return fs
+
+def conv(s):
+    if isinstance(s, unicode):
+        s = s.encode('iso-8859-1')
+    return s.decode('string-escape').decode('utf-8')
+
 
 class fbcontactdata():
     def __init__(self, fullname, first, middle, last, email):
@@ -108,15 +116,6 @@ class fbcontactsparser():
         Fills the funlist list with all the parsed functionalities based on the index.
         """
         self.vlog(VERB_MED, "-> %s" % __name__)
-        
-        # Find the position of the begining tag
-        #begintag = "Lista Completa de Funcionalidades"
-        #beginloc = self.__f.find(begintag)
-        ## Find the position of the end tag
-        #endtag = "LISTA COMPLETA DE FUNCIONALIDADES"
-        #endloc = self.__f.find(endtag, beginloc+1)
-        ## Set the cursor at the begining tag & skip the first line
-        #self.__f.seek(beginloc)
         self.__f.seek(0)
         self.__f.readline()
         loc = self.__f.tell()
@@ -151,7 +150,8 @@ class fbcontactsparser():
 #        csvhdlr = csv.writer(fh, quotechar='"', quoting=csv.QUOTE_MINIMAL)
         #csvhdlr.writerow("Name,Given Name,Additional Name,Family Name,Yomi Name,Given Name Yomi,Additional Name Yomi,Family Name Yomi,Name Prefix,Name Suffix,Initials,Nickname,Short Name,Maiden Name,Birthday,Gender,Location,Billing Information,Directory Server,Mileage,Occupation,Hobby,Sensitivity,Priority,Subject,Notes,Group Membership,E-mail 1 - Type,E-mail 1 - Value".split(','))        
         
-        clist = biggestline.split('&quot;}]},')
+        #clist = biggestline.split('&quot;}]},')
+        clist = biggestline.split(b'</label></div></li>')
         for contact in clist:
             fullname = ''
             first = ''
@@ -159,40 +159,66 @@ class fbcontactsparser():
             last = ''
             email = ''
             
-            m = re.compile(r'&quot;name&quot;:&quot;(.*?)&quot;,').search(contact)
+            # RECORD
+            #<li><div class="clearfix"><label><input checked="checked" name="contact_553" value="{&quot;name&quot;:&quot;Vinicius Bufoni &quot;,&quot;email&quot;:&quot;vinicius@bufoni.com.br&quot;,&quot;fields&quot;:[{&quot;type&quot;:&quot;name&quot;,&quot;first&quot;:&quot;Vinicius&quot;,&quot;middle&quot;:&quot;Bufoni&quot;},{&quot;type&quot;:&quot;email&quot;,&quot;data&quot;:&quot;vinicius@bufoni.com.br&quot;}],&quot;category&quot;:&quot;Msn&quot;}" type="checkbox">Vinicius Bufoni <b>vinicius@bufoni.com.br</b></label></div></li>
+            
+            m = re.compile(b'<li><div class="clearfix"><label><input checked="checked" name="contact_(.*?)" value=').search(contact)
+            if m:
+                cid = m.group(1)
+                
+            #&quot;name&quot;:&quot;\\u00c1tila Ocanha &quot;
+            m = re.compile(b'&quot;name&quot;:&quot;(.*?)&quot;').search(contact)
             if m:
                 fullname = m.group(1)
-            
-            m = re.compile(r'{&quot;email&quot;:&quot;(.*?)&quot;,').search(contact)
+                
+            m = re.compile(b'&quot;email&quot;:&quot;(.*?)&quot;').search(contact)
             if m:
                 email = m.group(1)
-            
-            m = re.compile(r'&quot;first&quot;:&quot;(.*?)&quot;,').search(contact)
+                
+            m = re.compile(b'&quot;name&quot;,&quot;first&quot;:&quot;(.*?)&quot;').search(contact)
+            #m = re.compile(r'&quot;first&quot;:&quot;(.*?)&quot;').search(contact)
             if m:
                 first = m.group(1)
                 
-            m = re.compile(r'&quot;last&quot;:&quot;(.*?)&quot;}').search(contact)
+            m = re.compile(b'&quot;last&quot;:&quot;(.*?)&quot;').search(contact)
+            #m = re.compile(r'&quot;last&quot;:&quot;(.*?)&quot;').search(contact)
             if m:
                 last = m.group(1)
-            
-            if last is not '':
-                m = re.compile(r'&quot;middle&quot;:&quot;(.*?)&quot;,').search(contact)
-            else:
-                m = re.compile(r'&quot;middle&quot;:&quot;(.*?)&quot;},').search(contact)
+                
+            #if last is not '':
+            m = re.compile(b'&quot;middle&quot;:&quot;(.*?)&quot;').search(contact)
+            #m = re.compile(r'&quot;middle&quot;:&quot;(.*?)&quot;').search(contact)
+            #else:
+                #m = re.compile(r'&quot;middle&quot;:&quot;(.*?)&quot;},').search(contact)
             if m:
                 middle = m.group(1)
             
-            fullname = re.sub( '\s+', ' ', split_on_caps(fullname)).strip()
+            #print(fullname)
+            fullname = re.sub('\s+', ' ', split_on_caps(fullname)).strip()
+            #print(fullname)
+            #print(conv(fullname))
+            fullname = fullname.decode('unicode_escape')
+            #first = first.decode('unicode_escape')
+            #middle = middle.decode('unicode_escape')
+            #newlast = last.decode('unicode_escape')
+            #print(fullname)
             
-            contact = fbcontactdata(fullname, first, middle, last, email)
-            self.clist.append(contact)
+            #fullname = unicode(fullname, "iso-8859-1")
+            #fullname = fullname.decode('latin9').encode('utf8')
+            #fullname = fullname.decode('Latin-1').encode('utf8')
+            #print(fullname)
             
-            self.vlog(VERB_MAX, "---")
-            self.vlog(VERB_MAX, "fullname = %s" % (fullname))
-            self.vlog(VERB_MAX, "first = %s" % (first))
-            self.vlog(VERB_MAX, "middle = %s" % (middle))
-            self.vlog(VERB_MAX, "last = %s" % (last))
-            self.vlog(VERB_MAX, "email = %s" % (email))
+            contactobject = fbcontactdata(fullname, first, middle, last, email)
+            self.clist.append(contactobject)
+            
+            #self.vlog(VERB_MAX, "--- %s" % (cid))
+            #self.vlog(VERB_MAX, "raw data = %s" % (contact))
+            print(fullname)
+            #self.vlog(VERB_MAX, "fullname = %s" % (fullname))
+            #self.vlog(VERB_MAX, "first = %s" % (first))
+            #self.vlog(VERB_MAX, "middle = %s" % (middle))
+            #self.vlog(VERB_MAX, "last = %s" % (newlast))
+            #self.vlog(VERB_MAX, "email = %s" % (email))
             
             #row = fullname + ',,,,,,,,,,,,,,,,,,,,,,,,,,fbcontacts ::: * My Contacts,* Home,' + email
             #csvhdlr.writerow(row.split(','))
@@ -207,31 +233,31 @@ class fbcontactsparser():
         #return self.funlist
     
     def writecsv(self):
+        fh = sys.stdout
         if self.outfile is not '':
             fh = open(self.outfile, 'wb')
             #fh = codecs.open(self.outfile, "wb", "utf-8")
-
-            #fh = codecs.open(self.outfile, 'wb', encoding="utf-8")
-        else:
-            fh = sys.stdout
-
+            #fh = codecs.open(self.outfile, 'wb', encoding="unicode_escape")
+        
         csvhdlr = csv.writer(fh, quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csvhdlr.writerow("Name,Given Name,Additional Name,Family Name,Yomi Name,Given Name Yomi,Additional Name Yomi,Family Name Yomi,Name Prefix,Name Suffix,Initials,Nickname,Short Name,Maiden Name,Birthday,Gender,Location,Billing Information,Directory Server,Mileage,Occupation,Hobby,Sensitivity,Priority,Subject,Notes,Group Membership,E-mail 1 - Type,E-mail 1 - Value".split(','))        
         for contact in self.clist:
             #csvhdlr.writerow(dict((vname, vtype, vnotes, vstereotype, vauthor, valias, vgenfile.encode('utf-8')) for vname, vtype, vnotes, vstereotype, vauthor, valias, vgenfile in row.iteritems()))
-            row = contact.fullname + ',,,,,,,,,,,,,,,,,,,,,,,,,,fbcontacts ::: * My Contacts,* Home,' + contact.email
-            csvhdlr.writerow(row.split(','))
-            #self.logv(2, "writecsv().row = " + str(row))
-        #self.logv(2, "writecsv().outfile = " + self.outfile)
-
+            row = contact.fullname + b',,,,,,,,,,,,,,,,,,,,,,,,,,fbcontacts ::: * My Contacts,* Home,' + contact.email
+            row = row.encode('utf8')
+            values = row.split(',')
+            print(values[0])
+            csvhdlr.writerow(values)
 
 def main(args):
-    parser = fbcontactsparser(args.filename)
+    #parser = fbcontactsparser(args.filename)
+    parser = fbcontactsparser(args[1])
     parser.parse()
     parser.writecsv()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = __doc__) #"Creates a CSV file with facebook contacts data (name and email) from yahoo TrueSwitch")
-    parser.add_argument("filename")
-    args = parser.parse_args()
-    main(args)
+    #parser = argparse.ArgumentParser(description = __doc__) #"Creates a CSV file with facebook contacts data (name and email) from yahoo TrueSwitch")
+    #parser.add_argument("filename")
+    #args = parser.parse_args()
+    #main(args)
+    sys.exit(main(sys.argv))
