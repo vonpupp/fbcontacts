@@ -23,5 +23,5 @@ Command Line Usage:
 Author:	Albert De La Fuente (www.albertdelafuente.com)
 E-Mail:	http://www.google.com/recaptcha/mailhide/d?k=01eb_9W_IYJ4Pm_Y9ALRIPug==&c=L15IEH_kstH8WRWfqnRyeW4IDQuZPzNDRB0KCzMTbHQ=
     
-Why I've done this:	I've done this because I believe that I own my fb account data,
-                        and I should be able to export it if I want.
+Why I've done this:	I've done this because I believe that I own my fb account
+                        data and I should be able to export it if I want.
